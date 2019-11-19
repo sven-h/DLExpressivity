@@ -14,10 +14,16 @@ public class SparqlDlExpressivityChecker extends JenaDLExpressivityChecker{
     
     protected String endoint;
     protected String graph;
+    protected String queryTemplate;
     
     public SparqlDlExpressivityChecker(String endoint, String graph) {
         this.endoint = trimIfNotNull(endoint);
         this.graph = trimIfNotNull(graph);
+        if(this.graph == null || this.graph.length() == 0){
+            this.queryTemplate = sparqlPrefixes + " ASK WHERE{ %s }";
+        }else{
+            this.queryTemplate = sparqlPrefixes + " ASK FROM <" + this.graph + "> WHERE{ %s }";
+        }
     }
     public SparqlDlExpressivityChecker(String endoint) {
         this(endoint, null);
@@ -28,7 +34,8 @@ public class SparqlDlExpressivityChecker extends JenaDLExpressivityChecker{
         for(Map.Entry<Construct, List<String>> entry : this.constructToSparqlQuery.entrySet()){
             LOGGER.info("Check for construct {}", entry.getKey());
             for(String s : entry.getValue()){
-                try (QueryExecution qe = QueryExecutionFactory.sparqlService(this.endoint, getQuery(s))){
+                String query = String.format(this.queryTemplate, s);
+                try (QueryExecution qe = QueryExecutionFactory.sparqlService(this.endoint, query)){
                     if(qe.execAsk()){
                         addConstruct(entry.getKey());
                         break;
@@ -36,15 +43,7 @@ public class SparqlDlExpressivityChecker extends JenaDLExpressivityChecker{
                 }
             }
         }
-    }
-    
-    protected String getQuery(String queryPart){
-        if(graph == null|| graph.length() == 0){
-            return String.format("%s ASK FROM <%s> WHERE{ %s }", sparqlPrefixes, graph, queryPart);
-        }else{
-            return String.format("%s ASK WHERE{ %s }", sparqlPrefixes, queryPart);
-        }
-    }
+    }    
 
     public String getEndoint() {
         return endoint;
